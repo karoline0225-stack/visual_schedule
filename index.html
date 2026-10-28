@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>루다쌤 모바일 시각일정표(visual schedule)</title>
+  <title>루다쌤 요일별 스케줄 보드</title>
   <!-- Tailwind CSS 로드 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -53,7 +53,7 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-    /* 인쇄용 (A4 세로) 스타일 */
+    /* 인쇄용 (A4 세로 1/3 너비 정렬) 스타일 */
     @media print {
       @page {
         size: A4 portrait;
@@ -64,26 +64,24 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-      /* 인쇄 시 불필요한 요소 숨김 처리 */
       .no-print {
         display: none !important;
       }
       .max-w-md {
-        max-width: 33.33% !important; /* A4 용지 세로 너비의 1/3만 차지 */
-        margin: 0 auto !important;    /* 양옆은 여백으로 두고 중앙 정렬 */
+        max-width: 33.33% !important;
+        margin: 0 auto !important;
         padding: 0 !important;
       }
       #scheduleList {
         margin-bottom: 0 !important;
       }
-      /* 좁아진 공간에 맞춰 인쇄 시 카드 레이아웃 세로형으로 변경 */
       .schedule-card {
         page-break-inside: avoid;
         border: 2px solid #e2e8f0 !important;
         margin-bottom: 15px !important;
         padding: 10px !important;
         box-shadow: none !important;
-        flex-direction: column !important; /* 사진 위, 글씨 아래 */
+        flex-direction: column !important;
         align-items: center !important;
         text-align: center !important;
         gap: 0 !important;
@@ -92,43 +90,43 @@
         width: 100% !important;
         height: auto !important;
         aspect-ratio: 1 / 1;
-        margin: 0 0 10px 0 !important; /* 이미지 아래쪽 여백 */
+        margin: 0 0 10px 0 !important;
         border: 1px solid #cbd5e1 !important;
       }
       .schedule-card h3 {
-        font-size: 16px !important; /* 글씨 크기 조정 */
+        font-size: 16px !important;
         margin-bottom: 0 !important;
         white-space: normal !important;
       }
     }
   </style>
 </head>
-<body class="text-gray-800 antialiased p-4 md:p-8 flex flex-col min-h-screen">
+<body class="text-gray-800 antialiased p-4 md:p-8 flex flex-col min-h-screen" oncontextmenu="return false;">
 
 <div class="max-w-md mx-auto w-full flex-1 flex flex-col relative">
   
   <!-- 상단 헤더 -->
   <header class="mb-6 flex items-center justify-center relative min-h-[40px]">
-    <h1 class="text-2xl font-bold text-gray-800" id="mainTitle">스케줄 보드 🗓️</h1>
-    <!-- 버튼 그룹 -->
+    <h1 class="text-2xl font-bold text-gray-800" id="mainTitle">월요일 스케줄 보드 🗓️</h1>
+    <!-- 버튼 그룹 (인쇄 글자 삭제 및 물음표 아이콘 추가) -->
     <div class="absolute right-0 flex gap-2 no-print">
       <button onclick="showManual()" class="w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-base shadow-sm transition-colors active:scale-95" title="사용 설명서">❓</button>
-      <button onclick="window.print()" class="px-3 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-sm shadow-sm transition-colors active:scale-95">🖨️ 인쇄</button>
+      <button onclick="window.print()" class="w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-base shadow-sm transition-colors active:scale-95" title="인쇄">🖨️</button>
     </div>
   </header>
 
-  <!-- 요일 선택 탭 영역 (스크롤 화살표 포함) -->
+  <!-- 요일 선택 탭 영역 (좌우 스크롤 화살표 포함) -->
   <div class="relative flex items-center mb-6 no-print w-full">
     <!-- 왼쪽 화살표 -->
-    <button id="scrollLeftBtn" class="absolute -left-2 z-10 w-8 h-8 flex items-center justify-center bg-white shadow-md border border-gray-200 text-gray-600 rounded-full active:scale-95 transition-transform text-xs" aria-label="왼쪽으로 스크롤">◀</button>
+    <button onclick="scrollTabs(-1)" class="absolute -left-2 z-10 w-8 h-8 flex items-center justify-center bg-white shadow-md border border-gray-200 text-gray-600 rounded-full active:scale-95 transition-transform text-xs" aria-label="왼쪽으로 스크롤">◀</button>
     
     <!-- 탭 컨테이너 -->
-    <div id="dayTabsContainer" class="day-tabs flex overflow-x-auto gap-2 pb-2 px-8 snap-x scroll-smooth w-full flex-1">
-      <!-- 요일 버튼들이 동적으로 렌더링 됩니다 -->
+    <div id="dayTabsContainer" class="day-tabs flex overflow-x-auto gap-1.5 pb-2 px-8 snap-x scroll-smooth w-full flex-1">
+      <!-- 탭들이 동적으로 렌더링 됩니다 -->
     </div>
     
     <!-- 오른쪽 화살표 -->
-    <button id="scrollRightBtn" class="absolute -right-2 z-10 w-8 h-8 flex items-center justify-center bg-white shadow-md border border-gray-200 text-gray-600 rounded-full active:scale-95 transition-transform text-xs" aria-label="오른쪽으로 스크롤">▶</button>
+    <button onclick="scrollTabs(1)" class="absolute -right-2 z-10 w-8 h-8 flex items-center justify-center bg-white shadow-md border border-gray-200 text-gray-600 rounded-full active:scale-95 transition-transform text-xs" aria-label="오른쪽으로 스크롤">▶</button>
   </div>
 
   <!-- 사진 추가 버튼 -->
@@ -142,7 +140,7 @@
   
   <!-- 해야 할 스케줄 목록 -->
   <div id="scheduleList" class="flex flex-col gap-4 mb-8 min-h-[150px]">
-    <!-- 동적으로 카드가 추가되는 영역 -->
+    <!-- 카드가 추가되는 영역 -->
   </div>
 
   <!-- 끝 박스 (완료된 스케줄) -->
@@ -155,23 +153,25 @@
     </div>
   </div>
 
-  <!-- 끝난 스케줄 모두 되돌리기 버튼 (차분한 파스텔 톤으로 수정) -->
+  <!-- 끝난 스케줄 모두 되돌리기 버튼 -->
   <button onclick="restoreAllDones()" class="mt-4 w-full py-3.5 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200/60 rounded-xl font-bold text-sm md:text-base shadow-sm transition-colors active:scale-95 no-print">
     🔄 끝난 스케줄 모두 되돌리기
   </button>
 
-  <!-- 스케줄 리셋 버튼 추가 -->
-  <button onclick="resetCurrentDay()" class="mt-2 w-full py-3.5 bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-xl font-bold text-sm md:text-base shadow-sm transition-colors active:scale-95 no-print">
+  <!-- 스케줄 리셋 버튼 -->
+  <button onclick="resetCurrentDay()" class="mt-2 w-full py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-xl font-bold text-sm md:text-base shadow-sm transition-colors active:scale-95 no-print">
     🗑️ 현재 탭 스케줄 전체 리셋하기
   </button>
 
 </div>
 
 <!-- 카피라이트 푸터 -->
-<footer class="mt-10 mb-4 text-center text-gray-400 text-sm font-medium no-print">
-  © 2026 Created by <a href="https://www.instagram.com/ruda_slp" target="_blank" rel="noopener noreferrer" class="text-rudaMint hover:text-teal-600 underline underline-offset-2">@ruda_slp</a>
-<br>무단 복제/도용 금지</footer>
-<!-- 커스텀 모달 -->
+<footer class="mt-10 mb-4 text-center text-gray-400 text-sm font-medium no-print flex flex-col gap-1">
+  <div>© 2026 Created by <a href="https://www.instagram.com/ruda_slp" target="_blank" rel="noopener noreferrer" class="text-rudaMint hover:text-teal-600 underline underline-offset-2">@ruda_slp</a></div>
+  <div class="text-xs text-gray-400">&lt;무단 복제/도용 금지&gt;</div>
+</footer>
+
+<!-- 커스텀 모달 (이름 수정 등) -->
 <div id="customModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 no-print">
   <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm shadow-2xl transform scale-95 transition-transform duration-200" id="modalContent">
     <h3 id="modalTitle" class="text-xl font-bold mb-4 text-gray-800">타이틀</h3>
@@ -185,179 +185,130 @@
 
 <!-- 설명서 모달 -->
 <div id="manualModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 no-print">
-  <div class="bg-white rounded-2xl p-6 w-11/12 max-w-md shadow-2xl transform scale-95 transition-transform duration-200 max-h-[85vh] overflow-y-auto" id="manualContent">
-    <div class="flex justify-between items-start mb-5">
-      <div>
-        <div class="text-sm font-bold text-gray-500 mb-1">&lt;SLP루다쌤이 만든 모바일 시각일정표(visual schedule)&gt;</div>
-        <h2 class="text-xl font-bold text-rudaMint">📖 사용 설명서</h2>
-      </div>
-      <button onclick="hideManual()" class="text-gray-400 hover:text-gray-600 text-3xl font-bold leading-none mt-1">&times;</button>
+  <div class="bg-white rounded-2xl p-6 w-11/12 max-w-md shadow-2xl transform scale-95 transition-transform duration-200 max-h-[85vh] flex flex-col" id="manualModalContent">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">📖 사용 설명서</h3>
+      <button onclick="hideManual()" class="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full font-bold text-sm">✕</button>
     </div>
-    <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
-      <div>
-        <h3 class="font-bold text-gray-800 text-base">1. 스케줄 분류하기 (탭 선택)</h3>
-        <p>상단의 요일 버튼을 눌러 스케줄을 추가할 날을 선택하세요. 요일에 상관없이 매일 쓰는 스케줄은 <strong>'한번'</strong> 탭을 이용하면 편리합니다.</p>
+    
+    <div class="overflow-y-auto flex-1 pr-2 space-y-4 text-sm text-gray-600 leading-relaxed">
+      <div class="text-center font-bold text-rudaMint text-base mb-2">&lt;SLP루다쌤이 만든&gt;</div>
+      <p class="font-medium text-gray-700">스마트폰으로 간편하게 일과를 관리하고 아이의 성취감을 높여주는 시각적 스케줄 보드입니다.</p>
+      
+      <div class="bg-teal-50/50 p-3.5 rounded-xl border border-teal-100">
+        <h4 class="font-bold text-gray-800 mb-1">1. 스케줄 분류하기 (탭 선택)</h4>
+        <p>상단의 요일 버튼을 눌러 날짜별로 스케줄을 관리하세요. 매일 반복되는 일상은 맨 앞의 <b>'한번'</b> 탭에 넣어두면 편리합니다.</p>
       </div>
-      <hr class="border-gray-100">
-      <div>
-        <h3 class="font-bold text-gray-800 text-base">2. 📸 사진 추가하기</h3>
-        <p>버튼을 눌러 스마트폰 갤러리의 사진을 고르거나 카메라로 바로 찍어 추가하세요. 아이가 직관적으로 알아볼 수 있는 사진일수록 좋습니다.</p>
+
+      <div class="bg-pink-50/50 p-3.5 rounded-xl border border-pink-100">
+        <h4 class="font-bold text-gray-800 mb-1">2. 📸 사진 추가하기</h4>
+        <p><b>[사진 추가하기]</b> 버튼을 눌러 사진을 고르거나 직접 촬영해 추가하세요. 친숙한 사진일수록 효과가 좋습니다.</p>
       </div>
-      <hr class="border-gray-100">
-      <div>
-        <h3 class="font-bold text-gray-800 text-base">3. 스케줄 카드 관리</h3>
-        <ul class="list-disc pl-5 mt-2 space-y-1 text-gray-600">
-            <li><strong>🎯 끝:</strong> 완료한 일과를 아래의 '끝 박스'로 보냅니다.</li>
-            <li><strong>▲/▼ 화살표:</strong> 카드의 순서를 위아래로 바꿉니다.</li>
-            <li><strong>✏️ (수정):</strong> 스케줄의 이름을 바꿉니다.</li>
-            <li><strong>🗑️ (삭제):</strong> 카드를 완전히 지웁니다.</li>
+
+      <div class="bg-sky-50/50 p-3.5 rounded-xl border border-sky-100">
+        <h4 class="font-bold text-gray-800 mb-1">3. 스케줄 카드 관리</h4>
+        <ul class="list-disc pl-4 space-y-1 mt-1">
+          <li><b>🎯 끝:</b> 일과를 마치면 누르어 '끝 박스'로 이동시킵니다.</li>
+          <li><b>▲ / ▼:</b> 카드의 순서를 위아래로 바꿉니다.</li>
+          <li><b>✏️ 수정 / 🗑️ 삭제:</b> 이름을 바꾸거나 카드를 지웁니다.</li>
         </ul>
       </div>
-      <hr class="border-gray-100">
-      <div>
-        <h3 class="font-bold text-gray-800 text-base">4. 📥 끝 박스 (다 한 일)</h3>
-        <p>오늘 아이가 스스로 해낸 일들이 모이는 곳입니다. 칭찬해 주기 좋은 공간이에요! 실수로 끝냈다면 <strong>'🔄 다시 꺼내기'</strong>를 누르세요.</p>
+
+      <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
+        <h4 class="font-bold text-gray-800 mb-1">4. 📥 끝 박스 및 인쇄 기능</h4>
+        <p>'끝' 누른 일정은 아래 끝 박스에 모이며, 상단 <b>🖨️ 인쇄 버튼</b>을 통해 A4 세로 형식으로 깔끔하게 출력할 수 있습니다.</p>
       </div>
-      <div class="bg-red-50 p-4 rounded-xl text-red-600 mt-4 border border-red-100">
-        <h3 class="font-bold mb-1">⚠️ 데이터 보관 시 주의사항</h3>
-        <p class="text-xs">이 앱의 모든 데이터는 <strong>현재 사용 중인 스마트폰 기기에만 저장</strong>됩니다. 브라우저의 '방문 기록 및 캐시 데이터'를 삭제하면 스케줄도 함께 지워지므로 유의해 주세요!</p>
+
+      <div class="text-xs text-gray-400 bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
+        <b>💡 안내:</b> 데이터는 사용 중인 기기(브라우저)에 안전하게 저장됩니다. 브라우저 캐시 삭제 시 데이터가 초기화될 수 있으니 유의하세요.
       </div>
     </div>
-    <div class="mt-6">
-      <button onclick="hideManual()" class="w-full py-3.5 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300 transition-colors">닫기</button>
+
+    <div class="mt-5 pt-3 border-t border-gray-100 flex justify-end">
+      <button onclick="hideManual()" class="px-5 py-2.5 rounded-xl font-semibold bg-rudaMint text-white hover:bg-teal-600 transition-colors">확인 완료</button>
     </div>
   </div>
 </div>
 
 <script>
-  let schedules = JSON.parse(localStorage.getItem('visualSchedulesData_v2')) || [];
-  
-  // 구버전 데이터 마이그레이션 ('월요일' -> '월' 형식으로 다시 짧게 변경)
-  let needsSave = false;
-  const reverseDayMap = {
-    '월요일': '월', '화요일': '화', '수요일': '수',
-    '목요일': '목', '금요일': '금', '토요일': '토', '일요일': '일'
-  };
+  // 탭 목록 ('한번' 및 월~일)
+  const days = [
+    { id: 'once', label: '한번', name: '한번' },
+    { id: 'mon', label: '월', name: '월요일' },
+    { id: 'tue', label: '화', name: '화요일' },
+    { id: 'wed', label: '수', name: '수요일' },
+    { id: 'thu', label: '목', name: '목요일' },
+    { id: 'fri', label: '금', name: '금요일' },
+    { id: 'sat', label: '토', name: '토요일' },
+    { id: 'sun', label: '일', name: '일요일' }
+  ];
 
-  schedules.forEach(s => {
-    if (reverseDayMap[s.day]) {
-      s.day = reverseDayMap[s.day];
-      needsSave = true;
+  let currentDay = 'mon';
+  let schedules = JSON.parse(localStorage.getItem('ruda_schedules') || '{}');
+
+  // 구버전 데이터 키 호환성 처리 (월, 화 -> 월요일, 화요일)
+  ['월', '화', '수', '목', '금', '토', '일'].forEach(oldKey => {
+    if (schedules[oldKey]) {
+      const matching = days.find(d => d.label === oldKey);
+      if (matching && !schedules[matching.id]) {
+        schedules[matching.id] = schedules[oldKey];
+      }
+      delete schedules[oldKey];
     }
   });
-  if (needsSave) localStorage.setItem('visualSchedulesData_v2', JSON.stringify(schedules));
 
-  // 구버전(요일 없는 데이터) 마이그레이션 로직
-  let oldData = JSON.parse(localStorage.getItem('visualSchedulesData'));
-  if (oldData && oldData.length > 0 && schedules.length === 0) {
-    schedules = oldData.map(s => ({ ...s, day: '한번' }));
-    localStorage.removeItem('visualSchedulesData');
-    localStorage.setItem('visualSchedulesData_v2', JSON.stringify(schedules));
-  }
-
-  // 요일 설정 (단순화된 이름 적용)
-  const days = ['한번', '월', '화', '수', '목', '금', '토', '일'];
-  const todayIndex = new Date().getDay();
-  let currentDay = days[todayIndex === 0 ? 7 : todayIndex]; 
-
-  const imageInput = document.getElementById('imageInput');
+  // DOM 요소
+  const dayTabsContainer = document.getElementById('dayTabsContainer');
   const scheduleList = document.getElementById('scheduleList');
   const doneBox = document.getElementById('doneBox');
-  const dayTabsContainer = document.getElementById('dayTabsContainer');
   const mainTitle = document.getElementById('mainTitle');
-  const addBtnText = document.getElementById('addBtnText');
+  const imageInput = document.getElementById('imageInput');
 
-  // 좌우 스크롤 버튼 이벤트 리스너 추가
-  document.getElementById('scrollLeftBtn').addEventListener('click', () => {
-    dayTabsContainer.scrollBy({ left: -150, behavior: 'smooth' });
-  });
-  document.getElementById('scrollRightBtn').addEventListener('click', () => {
-    dayTabsContainer.scrollBy({ left: 150, behavior: 'smooth' });
-  });
+  // 탭 스크롤 제어 함수
+  function scrollTabs(direction) {
+    dayTabsContainer.scrollBy({ left: direction * 120, behavior: 'smooth' });
+  }
 
-  // --- 커스텀 모달 관리 ---
-  const Modal = {
-    overlay: document.getElementById('customModal'),
-    content: document.getElementById('modalContent'),
-    title: document.getElementById('modalTitle'),
-    input: document.getElementById('modalInput'),
-    btnCancel: document.getElementById('modalCancel'),
-    btnConfirm: document.getElementById('modalConfirm'),
-    onConfirmCb: null,
-
-    show(options) {
-      this.title.textContent = options.title;
-      if (options.type === 'prompt') {
-        this.input.classList.remove('hidden-input');
-        this.input.value = options.defaultValue || '';
-        this.input.placeholder = options.placeholder || '';
-      } else {
-        this.input.classList.add('hidden-input');
-      }
-      this.onConfirmCb = options.onConfirm;
-      
-      this.overlay.classList.remove('hidden');
-      requestAnimationFrame(() => {
-        this.overlay.classList.remove('opacity-0');
-        this.content.classList.remove('scale-95');
-        if (options.type === 'prompt') this.input.focus();
-      });
-    },
-
-    hide() {
-      this.overlay.classList.add('opacity-0');
-      this.content.classList.add('scale-95');
-      setTimeout(() => { this.overlay.classList.add('hidden'); }, 200);
-    },
-
-    init() {
-      this.btnCancel.addEventListener('click', () => this.hide());
-      this.btnConfirm.addEventListener('click', () => {
-        const val = this.input.value.trim();
-        this.hide();
-        if (this.onConfirmCb) this.onConfirmCb(val);
-      });
-      this.overlay.addEventListener('click', (e) => {
-        if(e.target === this.overlay) this.hide();
-      });
-    }
-  };
-  Modal.init();
-
-  // --- 메인 로직 ---
-
-  // 요일 탭 렌더링
+  // 초기 탭 렌더링
   function renderTabs() {
     dayTabsContainer.innerHTML = '';
     days.forEach(day => {
       const btn = document.createElement('button');
-      const isActive = day === currentDay;
+      const isSelected = currentDay === day.id;
       
-      // 요일별 활성화 색상 지정
-      let activeColorClass = 'bg-rudaMint'; // 기본 (한번, 평일)
-      if (day === '토') activeColorClass = 'bg-rudaBlue'; // 토요일
-      if (day === '일') activeColorClass = 'bg-rudaPink'; // 일요일
+      let baseClasses = "px-4 py-2.5 rounded-2xl font-bold text-sm snap-start transition-all duration-200 whitespace-nowrap shadow-sm flex-shrink-0";
+      let colorClasses = "";
 
-      btn.className = `snap-center shrink-0 px-4 py-2.5 rounded-full font-bold text-sm sm:text-base transition-colors ${
-        isActive 
-          ? `${activeColorClass} text-white shadow-md` 
-          : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
-      }`;
-      btn.textContent = day;
+      if (isSelected) {
+        if (day.id === 'sat') {
+          colorClasses = "bg-sky-100 text-sky-700 border-2 border-sky-300 scale-105 shadow-md";
+        } else if (day.id === 'sun') {
+          colorClasses = "bg-rose-100 text-rose-700 border-2 border-rose-300 scale-105 shadow-md";
+        } else {
+          colorClasses = "bg-rudaMint text-white shadow-md scale-105 border-2 border-rudaMint";
+        }
+      } else {
+        colorClasses = "bg-white text-gray-500 hover:bg-gray-50 border border-gray-200/80";
+      }
+
+      btn.className = `${baseClasses} ${colorClasses}`;
+      btn.textContent = day.label;
       btn.onclick = () => {
-        currentDay = day;
+        currentDay = day.id;
+        mainTitle.textContent = `${day.name} 스케줄 보드 🗓️`;
         renderTabs();
-        render();
+        renderSchedules();
       };
       dayTabsContainer.appendChild(btn);
     });
-
-    // 타이틀 및 버튼 텍스트 업데이트 (자연스럽게 읽히도록 '요일' 추가)
-    mainTitle.textContent = currentDay === '한번' ? '한번 할 스케줄 🗓️' : `${currentDay}요일 스케줄 🗓️`;
-    addBtnText.textContent = currentDay === '한번' ? '한번 쓸 사진 추가' : `${currentDay}요일 사진 추가`;
   }
 
-  // 이미지 업로드 이벤트 (압축 비율 조정)
+  // 스케줄 데이터 저장
+  function saveSchedules() {
+    localStorage.setItem('ruda_schedules', JSON.stringify(schedules));
+  }
+
+  // 이미지 압축 및 업로드 처리
   imageInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -367,251 +318,240 @@
       const img = new Image();
       img.onload = function() {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 500; 
-        const MAX_HEIGHT = 500;
         let width = img.width;
         let height = img.height;
+        const maxDim = 600;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-        } else {
-          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
         }
+
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
-        
-        const compressedImgData = canvas.toDataURL('image/jpeg', 0.8);
 
-        Modal.show({
-          type: 'prompt',
-          title: '새 스케줄의 이름을 입력하세요',
-          placeholder: '예: 언어 치료, 간식 먹기',
-          onConfirm: (title) => {
-            const newTitle = title || "새로운 일정";
-            const newSchedule = {
-              id: Date.now(),
-              day: currentDay, // 현재 선택된 요일로 저장
-              title: newTitle,
-              imgData: compressedImgData,
-              done: false
-            };
-            schedules.push(newSchedule);
-            saveAndRender();
-          }
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        
+        if (!schedules[currentDay]) {
+          schedules[currentDay] = { active: [], done: [] };
+        }
+
+        schedules[currentDay].active.push({
+          id: Date.now(),
+          text: '새로운 스케줄',
+          img: compressedDataUrl
         });
+
+        saveSchedules();
+        renderSchedules();
+        imageInput.value = '';
       };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
-    imageInput.value = ''; 
   });
 
-  function saveAndRender() {
-    try {
-      localStorage.setItem('visualSchedulesData_v2', JSON.stringify(schedules));
-      render();
-    } catch (e) {
-      if (e.name === 'QuotaExceededError') {
-        schedules.pop();
-        Modal.show({
-          type: 'confirm',
-          title: '저장 공간이 가득 찼습니다! 오래된 스케줄을 삭제해주세요.',
-          onConfirm: () => {}
-        });
-      } else {
-        console.error(e);
-      }
-    }
-  }
-
-  function render() {
+  // 스케줄 목록 렌더링 (사진 크기 큼직하게 1/2 비율 유지)
+  function renderSchedules() {
+    const dayData = schedules[currentDay] || { active: [], done: [] };
     scheduleList.innerHTML = '';
     doneBox.innerHTML = '';
-    
-    // 현재 선택된 요일의 데이터만 필터링
-    const currentSchedules = schedules.filter(s => s.day === currentDay);
-    const todos = currentSchedules.filter(s => !s.done);
-    const dones = currentSchedules.filter(s => s.done);
-    
-    // 1. 진행 중인 스케줄 렌더링
-    if (todos.length === 0) {
-      scheduleList.innerHTML = `<div class="text-center text-gray-400 py-10 bg-white rounded-2xl border border-dashed border-gray-300">아직 추가된 스케줄이 없습니다.</div>`;
+
+    // 해야 할 일 렌더링
+    if (dayData.active.length === 0) {
+      scheduleList.innerHTML = `
+        <div class="text-center py-10 bg-white rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">
+          등록된 스케줄이 없어요.<br>위의 사진 추가 버튼을 눌러 시작해보세요! 📸
+        </div>
+      `;
     } else {
-      todos.forEach((item, index) => {
-        const card = createCardElement(item, index, todos.length, false);
+      dayData.active.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = "schedule-card bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4 relative";
+        card.innerHTML = `
+          <img src="${item.img}" alt="스케줄 사진" class="w-1/2 aspect-square object-cover rounded-xl border border-gray-100 flex-shrink-0 shadow-sm">
+          <div class="flex-1 flex flex-col justify-between h-full py-1">
+            <h3 class="text-lg font-bold text-gray-800 break-words leading-snug mb-3">${item.text}</h3>
+            <div class="flex flex-wrap items-center gap-1.5 no-print">
+              <button onclick="moveToDone(${item.id})" class="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-rudaMint rounded-lg font-bold text-xs shadow-sm transition-transform active:scale-95">🎯 끝</button>
+              <button onclick="openEditModal('${currentDay}', 'active', ${item.id}, '${item.text}')" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-xs transition-transform active:scale-95">✏️</button>
+              <button onclick="deleteSchedule('${currentDay}', 'active', ${item.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rudaPink rounded-lg font-semibold text-xs transition-transform active:scale-95">🗑️</button>
+            </div>
+            <div class="flex items-center gap-1 mt-2 no-print">
+              <button onclick="moveOrder('${currentDay}', 'active', ${index}, -1)" class="w-7 h-7 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg text-xs font-bold flex items-center justify-center ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === 0 ? 'disabled' : ''}>▲</button>
+              <button onclick="moveOrder('${currentDay}', 'active', ${index}, 1)" class="w-7 h-7 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg text-xs font-bold flex items-center justify-center ${index === dayData.active.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === dayData.active.length - 1 ? 'disabled' : ''}>▼</button>
+            </div>
+          </div>
+        `;
         scheduleList.appendChild(card);
       });
     }
 
-    // 2. 끝 박스 렌더링
-    if (dones.length === 0) {
-      doneBox.innerHTML = `<div class="text-center text-gray-400/80 py-4 text-sm">끝난 스케줄이 여기에 모입니다.</div>`;
+    // 끝 박스 렌더링
+    if (dayData.done.length === 0) {
+      doneBox.innerHTML = `
+        <div class="text-center py-4 text-gray-400 text-sm font-medium">
+          아직 마친 스케줄이 없어요!
+        </div>
+      `;
     } else {
-      dones.forEach((item) => {
-        const card = createCardElement(item, 0, 0, true);
+      dayData.done.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = "schedule-card done-card bg-white rounded-2xl p-4 border border-gray-200 flex items-center gap-4 relative";
+        card.innerHTML = `
+          <img src="${item.img}" alt="완료된 스케줄" class="w-1/2 aspect-square object-cover rounded-xl flex-shrink-0">
+          <div class="flex-1 flex flex-col justify-between h-full py-1">
+            <h3 class="text-lg font-semibold text-gray-500 line-through break-words leading-snug mb-3">${item.text}</h3>
+            <div class="no-print">
+              <button onclick="restoreFromDone(${item.id})" class="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-lg font-bold text-xs shadow-sm transition-transform active:scale-95">🔄 다시 꺼내기</button>
+            </div>
+          </div>
+        `;
         doneBox.appendChild(card);
       });
     }
   }
 
-  // 카드 생성기
-  function createCardElement(item, index, arrayLength, isDone) {
-    const card = document.createElement('div');
-    
-    if (isDone) {
-      card.className = 'schedule-card done-card rounded-2xl p-3 flex items-center';
-      card.innerHTML = `
-        <img src="${item.imgData}" class="w-16 h-16 object-cover rounded-xl bg-gray-200 shrink-0 mr-4 border border-gray-200" alt="스케줄">
-        <div class="flex-1 min-w-0">
-          <h3 class="text-lg font-bold text-gray-500 line-through truncate mb-2">${item.title}</h3>
-          <div class="flex gap-2 no-print">
-            <button onclick="toggleDone(${item.id})" class="px-3 py-1.5 bg-gray-400 text-white text-sm font-semibold rounded-lg shadow-sm active:scale-95 transition-transform">🔄 다시 꺼내기</button>
-            <button onclick="deleteItem(${item.id})" class="px-3 py-1.5 bg-red-400 text-white text-sm font-semibold rounded-lg shadow-sm active:scale-95 transition-transform">🗑️ 삭제</button>
-          </div>
-        </div>
-      `;
-    } else {
-      card.className = 'schedule-card bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 sm:gap-4';
-      card.innerHTML = `
-        <img src="${item.imgData}" class="w-36 h-36 sm:w-44 sm:h-44 object-cover rounded-2xl shadow-sm bg-gray-50 border border-gray-200 shrink-0" alt="스케줄">
-        <div class="flex-1 min-w-0 flex flex-col justify-center h-full py-1">
-          <h3 class="text-xl sm:text-2xl font-bold text-gray-800 truncate mb-4">${item.title}</h3>
-          <!-- 제어 버튼 영역 (인쇄 시 숨김) -->
-          <div class="flex flex-wrap gap-2 mt-auto no-print">
-            <button onclick="toggleDone(${item.id})" class="flex-1 min-w-[70px] px-2 py-3 bg-rudaMint text-white text-sm sm:text-base font-bold rounded-xl shadow-sm active:bg-teal-600 transition-colors">🎯 끝</button>
-            <button onclick="editTitle(${item.id})" class="px-3 py-3 bg-gray-100 text-gray-600 text-sm sm:text-base font-bold rounded-xl shadow-sm active:bg-gray-200 transition-colors">✏️</button>
-            <button onclick="deleteItem(${item.id})" class="px-3 py-3 bg-red-50 text-red-500 text-sm sm:text-base font-bold rounded-xl shadow-sm border border-red-100 active:bg-red-100 transition-colors">🗑️</button>
-          </div>
-        </div>
-        
-        <!-- 위/아래 이동 버튼 (인쇄 시 숨김) -->
-        <div class="flex flex-col justify-center gap-2 ml-1 shrink-0 h-full no-print">
-          <button onclick="moveItem(${item.id}, -1)" class="w-11 h-11 flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-500 text-lg rounded-xl active:scale-95 transition-all disabled:opacity-20 border border-gray-100 shadow-sm" ${index === 0 ? 'disabled' : ''}>▲</button>
-          <button onclick="moveItem(${item.id}, 1)" class="w-11 h-11 flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-500 text-lg rounded-xl active:scale-95 transition-all disabled:opacity-20 border border-gray-100 shadow-sm" ${index === arrayLength - 1 ? 'disabled' : ''}>▼</button>
-        </div>
-      `;
-    }
-    return card;
+  // 순서 이동
+  function moveOrder(dayKey, type, index, direction) {
+    const list = schedules[dayKey][type];
+    const targetIdx = index + direction;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIdx];
+    list[targetIdx] = temp;
+    saveSchedules();
+    renderSchedules();
   }
 
-  // 액션 함수들
-  window.toggleDone = function(id) {
-    const item = schedules.find(s => s.id === id);
-    if (item) {
-      item.done = !item.done;
-      saveAndRender();
+  // 끝 박스로 이동
+  function moveToDone(id) {
+    const dayData = schedules[currentDay];
+    const idx = dayData.active.findIndex(item => item.id === id);
+    if (idx > -1) {
+      const [item] = dayData.active.splice(idx, 1);
+      dayData.done.push(item);
+      saveSchedules();
+      renderSchedules();
     }
-  };
+  }
 
-  window.editTitle = function(id) {
-    const item = schedules.find(s => s.id === id);
-    if (item) {
-      Modal.show({
-        type: 'prompt',
-        title: '스케줄 이름 수정',
-        defaultValue: item.title,
-        onConfirm: (newTitle) => {
-          if (newTitle) {
-            item.title = newTitle;
-            saveAndRender();
-          }
-        }
-      });
+  // 끝 박스에서 꺼내기
+  function restoreFromDone(id) {
+    const dayData = schedules[currentDay];
+    const idx = dayData.done.findIndex(item => item.id === id);
+    if (idx > -1) {
+      const [item] = dayData.done.splice(idx, 1);
+      dayData.active.push(item);
+      saveSchedules();
+      renderSchedules();
     }
-  };
-
-  window.deleteItem = function(id) {
-    Modal.show({
-      type: 'confirm',
-      title: '정말 이 스케줄을 삭제할까요?',
-      onConfirm: () => {
-        schedules = schedules.filter(s => s.id !== id);
-        saveAndRender();
-      }
-    });
-  };
+  }
 
   // 끝난 스케줄 모두 되돌리기
-  window.restoreAllDones = function() {
-    const hasDones = schedules.some(s => s.day === currentDay && s.done);
-    if (!hasDones) return; // 끝난 항목이 없으면 동작하지 않음
+  function restoreAllDones() {
+    const dayData = schedules[currentDay];
+    if (!dayData || dayData.done.length === 0) return;
+    dayData.active.push(...dayData.done);
+    dayData.done = [];
+    saveSchedules();
+    renderSchedules();
+  }
 
-    Modal.show({
-      type: 'confirm',
-      title: `'${currentDay}' 탭의 끝난 스케줄을 모두 되돌릴까요?`,
-      onConfirm: () => {
-        schedules = schedules.map(s => {
-          if (s.day === currentDay && s.done) {
-            return { ...s, done: false };
-          }
-          return s;
-        });
-        saveAndRender();
-      }
-    });
-  };
-
-  // 현재 요일(탭) 전체 리셋
-  window.resetCurrentDay = function() {
-    Modal.show({
-      type: 'confirm',
-      title: `'${currentDay}' 탭의 모든 스케줄을 싹 지울까요?`,
-      onConfirm: () => {
-        schedules = schedules.filter(s => s.day !== currentDay);
-        saveAndRender();
-      }
-    });
-  };
-
-  // 동일 요일 내에서의 위치 이동
-  window.moveItem = function(id, direction) {
-    const currentSchedules = schedules.filter(s => s.day === currentDay && !s.done);
-    const subIndex = currentSchedules.findIndex(s => s.id === id);
-    if (subIndex === -1) return;
-
-    const targetItem = direction === -1 ? currentSchedules[subIndex - 1] : currentSchedules[subIndex + 1];
-    
-    if (targetItem) {
-      // 전체 배열에서의 진짜 인덱스 찾기
-      const indexA = schedules.findIndex(s => s.id === id);
-      const indexB = schedules.findIndex(s => s.id === targetItem.id);
-      
-      // 스왑
-      [schedules[indexA], schedules[indexB]] = [schedules[indexB], schedules[indexA]];
-      saveAndRender();
+  // 현재 탭 스케줄 전체 리셋하기
+  function resetCurrentDay() {
+    const dayObj = days.find(d => d.id === currentDay);
+    if (confirm(`정말 [${dayObj ? dayObj.name : '현재'} 스케줄]의 모든 카드를 삭제하시겠습니까?`)) {
+      schedules[currentDay] = { active: [], done: [] };
+      saveSchedules();
+      renderSchedules();
     }
-  };
+  }
 
-  // 설명서 모달 로직 추가
-  window.showManual = function() {
-    const modal = document.getElementById('manualModal');
-    const content = document.getElementById('manualContent');
-    modal.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      modal.classList.remove('opacity-0');
-      content.classList.remove('scale-95');
-    });
-  };
+  // 삭제
+  function deleteSchedule(dayKey, type, id) {
+    if (confirm("이 스케줄 카드를 삭제하시겠습니까?")) {
+      schedules[dayKey][type] = schedules[dayKey][type].filter(item => item.id !== id);
+      saveSchedules();
+      renderSchedules();
+    }
+  }
 
-  window.hideManual = function() {
-    const modal = document.getElementById('manualModal');
-    const content = document.getElementById('manualContent');
-    modal.classList.add('opacity-0');
-    content.classList.add('scale-95');
-    setTimeout(() => { modal.classList.add('hidden'); }, 200);
-  };
+  // 모달 제어 (이름 수정)
+  const customModal = document.getElementById('customModal');
+  const modalContent = document.getElementById('modalContent');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalInput = document.getElementById('modalInput');
+  const modalCancel = document.getElementById('modalCancel');
+  const modalConfirm = document.getElementById('modalConfirm');
 
-  document.getElementById('manualModal').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('manualModal')) window.hideManual();
-  });
+  function openEditModal(dayKey, type, id, currentText) {
+    modalTitle.textContent = "스케줄 이름 수정";
+    modalInput.value = currentText;
+    modalInput.classList.remove('hidden-input');
+    customModal.classList.remove('hidden');
+    setTimeout(() => {
+      customModal.classList.remove('opacity-0');
+      modalContent.classList.remove('scale-95');
+      modalContent.classList.add('scale-100');
+      modalInput.focus();
+    }, 10);
 
-  // 초기 렌더링
-  document.addEventListener('DOMContentLoaded', () => {
-    renderTabs();
-    render();
-  });
+    modalConfirm.onclick = function() {
+      const newText = modalInput.value.trim();
+      if (newText) {
+        const item = schedules[dayKey][type].find(i => i.id === id);
+        if (item) {
+          item.text = newText;
+          saveSchedules();
+          renderSchedules();
+        }
+      }
+      closeModal();
+    };
+
+    modalCancel.onclick = closeModal;
+  }
+
+  function closeModal() {
+    customModal.classList.add('opacity-0');
+    modalContent.classList.remove('scale-100');
+    modalContent.classList.add('scale-95');
+    setTimeout(() => {
+      customModal.classList.add('hidden');
+    }, 200);
+  }
+
+  // 설명서 모달 제어
+  const manualModal = document.getElementById('manualModal');
+  const manualModalContent = document.getElementById('manualModalContent');
+
+  function showManual() {
+    manualModal.classList.remove('hidden');
+    setTimeout(() => {
+      manualModal.classList.remove('opacity-0');
+      manualModalContent.classList.remove('scale-95');
+      manualModalContent.classList.add('scale-100');
+    }, 10);
+  }
+
+  function hideManual() {
+    manualModal.classList.add('opacity-0');
+    manualModalContent.classList.remove('scale-100');
+    manualModalContent.classList.add('scale-95');
+    setTimeout(() => {
+      manualModal.classList.add('hidden');
+    }, 200);
+  }
+
+  // 앱 실행 시 초기 렌더링
+  renderTabs();
+  renderSchedules();
 </script>
 
 </body>
