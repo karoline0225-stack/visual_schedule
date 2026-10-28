@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>루다쌤 모바일 시각일정표(visual schedule)</title>
+  <!-- Tailwind CSS 로드 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- 커스텀 색상 및 스타일 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            rudaPink: '#F1848B',
+            rudaMint: '#64AFA2',
+            rudaBlue: '#7AB2D3',
+            bgWarm: '#fdfbfb'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', 'Malgun Gothic', sans-serif;
+      background-color: #fdfbfb; 
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .hidden-input { display: none; }
+    
+    /* 카드 트랜지션 애니메이션 */
+    .schedule-card { transition: all 0.3s ease; }
+    
+    .done-card {
+      opacity: 0.6;
+      background-color: #f9fafb;
+      box-shadow: none;
+      border: 1px dashed #cbd5e1;
+      filter: grayscale(20%);
+    }
+
+    /* 요일 탭 가로 스크롤 숨김 */
+    .day-tabs::-webkit-scrollbar { display: none; }
+    .day-tabs { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 커스텀 스크롤바 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    /* 인쇄용 (A4 세로) 스타일 */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 20mm;
+      }
+      body {
+        background-color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      /* 인쇄 시 불필요한 요소 숨김 처리 */
+      .no-print {
+        display: none !important;
+      }
+      .max-w-md {
+        max-width: 33.33% !important; /* A4 용지 세로 너비의 1/3만 차지 */
+        margin: 0 auto !important;    /* 양옆은 여백으로 두고 중앙 정렬 */
+        padding: 0 !important;
+      }
+      #scheduleList {
+        margin-bottom: 0 !important;
+      }
+      /* 좁아진 공간에 맞춰 인쇄 시 카드 레이아웃 세로형으로 변경 */
+      .schedule-card {
+        page-break-inside: avoid;
+        border: 2px solid #e2e8f0 !important;
+        margin-bottom: 15px !important;
+        padding: 10px !important;
+        box-shadow: none !important;
+        flex-direction: column !important; /* 사진 위, 글씨 아래 */
+        align-items: center !important;
+        text-align: center !important;
+        gap: 0 !important;
+      }
+      .schedule-card img {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 1 / 1;
+        margin: 0 0 10px 0 !important; /* 이미지 아래쪽 여백 */
+        border: 1px solid #cbd5e1 !important;
+      }
+      .schedule-card h3 {
+        font-size: 16px !important; /* 글씨 크기 조정 */
+        margin-bottom: 0 !important;
+        white-space: normal !important;
+      }
+    }
+  </style>
+</head>
+<body class="text-gray-800 antialiased p-4 md:p-8 flex flex-col min-h-screen">
+
+<div class="max-w-md mx-auto w-full flex-1 flex flex-col relative">
+  
+  <!-- 상단 헤더 -->
+  <header class="mb-6 flex items-center justify-center relative min-h-[40px]">
+    <h1 class="text-2xl font-bold text-gray-800" id="mainTitle">스케줄 보드 🗓️</h1>
+    <!-- 버튼 그룹 -->
+    <div class="absolute right-0 flex gap-2 no-print">
+      <button onclick="showManual()" class="w-9 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-base shadow-sm transition-colors active:scale-95" title="사용 설명서">❓</button>
+      <button onclick="window.print()" class="px-3 h-9 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-bold text-sm shadow-sm transition-colors active:scale-95">🖨️ 인쇄</button>
+    </div>
+  </header>
+
+  <!-- 요일 선택 탭 영역 (스크롤 화살표 포함) -->
+  <div class="relative flex items-center mb-6 no-print w-full">
+    <!-- 왼쪽 화살표 -->
+    <button id="scrollLeftBtn" class="absolute -left-2 z-10 w-8 h-8 flex items-center justify-center bg-white shadow-md border border-gray-200 text-gray-600 rounded-full active:scale-95 transition-transform text-xs" aria-label="왼쪽으로 스크롤">◀</button>
+    
+    <!-- 탭 컨테이너 -->
+    <div id="dayTabsContainer" class="day-tabs flex overflow-x-auto gap-2 pb-2 px-8 snap-x scroll-smooth w-full flex-1">
+      <!-- 요일 버튼들이 동적으로 렌더링 됩니다 -->
+    </div>
+    
+    <!-- 오른쪽 화살표 -->
+    <button id="scrollRightBtn" class="absolute -right-2 z-10 w-8 h-8 flex items-center justify-center bg-white shadow-md border border-gray-200 text-gray-600 rounded-full active:scale-95 transition-transform text-xs" aria-label="오른쪽으로 스크롤">▶</button>
+  </div>
+
+  <!-- 사진 추가 버튼 -->
+  <div class="mb-6 no-print">
+    <label class="flex items-center justify-center w-full py-4 bg-rudaPink hover:bg-rose-400 active:bg-rose-500 text-white rounded-2xl text-lg font-bold cursor-pointer shadow-lg shadow-red-100 transition-transform transform active:scale-95 border-2 border-rudaPink">
+      <span class="mr-2 text-2xl">📸</span> 
+      <span id="addBtnText">사진 추가하기</span>
+      <input type="file" id="imageInput" accept="image/*" class="hidden-input">
+    </label>
+  </div>
+  
+  <!-- 해야 할 스케줄 목록 -->
+  <div id="scheduleList" class="flex flex-col gap-4 mb-8 min-h-[150px]">
+    <!-- 동적으로 카드가 추가되는 영역 -->
+  </div>
+
+  <!-- 끝 박스 (완료된 스케줄) -->
+  <div class="mt-auto border-4 border-dashed border-rudaMint rounded-2xl p-5 bg-teal-50/30 no-print">
+    <div class="flex items-center justify-center text-lg font-bold text-rudaMint mb-4">
+      📥 끝 박스 (다 한 일)
+    </div>
+    <div id="doneBox" class="flex flex-col gap-4 min-h-[80px]">
+      <!-- 완료된 카드가 추가되는 영역 -->
+    </div>
+  </div>
+
+  <!-- 끝난 스케줄 모두 되돌리기 버튼 (차분한 파스텔 톤으로 수정) -->
+  <button onclick="restoreAllDones()" class="mt-4 w-full py-3.5 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200/60 rounded-xl font-bold text-sm md:text-base shadow-sm transition-colors active:scale-95 no-print">
+    🔄 끝난 스케줄 모두 되돌리기
+  </button>
+
+  <!-- 스케줄 리셋 버튼 추가 -->
+  <button onclick="resetCurrentDay()" class="mt-2 w-full py-3.5 bg-gray-200 hover:bg-gray-300 text-gray-500 rounded-xl font-bold text-sm md:text-base shadow-sm transition-colors active:scale-95 no-print">
+    🗑️ 현재 탭 스케줄 전체 리셋하기
+  </button>
+
+</div>
+
+<!-- 카피라이트 푸터 -->
+<footer class="mt-10 mb-4 text-center text-gray-400 text-sm font-medium no-print">
+  © 2026 Created by <a href="https://www.instagram.com/ruda_slp" target="_blank" rel="noopener noreferrer" class="text-rudaMint hover:text-teal-600 underline underline-offset-2">@ruda_slp</a>
+<br>무단 복제/도용 금지</footer>
+<!-- 커스텀 모달 -->
+<div id="customModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 no-print">
+  <div class="bg-white rounded-2xl p-6 w-11/12 max-w-sm shadow-2xl transform scale-95 transition-transform duration-200" id="modalContent">
+    <h3 id="modalTitle" class="text-xl font-bold mb-4 text-gray-800">타이틀</h3>
+    <input type="text" id="modalInput" class="w-full border-2 border-gray-200 rounded-xl p-3 text-lg mb-6 focus:outline-none focus:border-rudaPink hidden-input placeholder-gray-400">
+    <div class="flex justify-end gap-3">
+      <button id="modalCancel" class="px-5 py-2.5 rounded-xl font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300 transition-colors">취소</button>
+      <button id="modalConfirm" class="px-5 py-2.5 rounded-xl font-semibold bg-rudaPink text-white hover:bg-rose-400 active:bg-rose-500 transition-colors">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 설명서 모달 -->
+<div id="manualModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-200 no-print">
+  <div class="bg-white rounded-2xl p-6 w-11/12 max-w-md shadow-2xl transform scale-95 transition-transform duration-200 max-h-[85vh] overflow-y-auto" id="manualContent">
+    <div class="flex justify-between items-start mb-5">
+      <div>
+        <div class="text-sm font-bold text-gray-500 mb-1">&lt;SLP루다쌤이 만든 모바일 시각일정표(visual schedule)&gt;</div>
+        <h2 class="text-xl font-bold text-rudaMint">📖 사용 설명서</h2>
+      </div>
+      <button onclick="hideManual()" class="text-gray-400 hover:text-gray-600 text-3xl font-bold leading-none mt-1">&times;</button>
+    </div>
+    <div class="space-y-4 text-sm text-gray-700 leading-relaxed">
+      <div>
+        <h3 class="font-bold text-gray-800 text-base">1. 스케줄 분류하기 (탭 선택)</h3>
+        <p>상단의 요일 버튼을 눌러 스케줄을 추가할 날을 선택하세요. 요일에 상관없이 매일 쓰는 스케줄은 <strong>'한번'</strong> 탭을 이용하면 편리합니다.</p>
+      </div>
+      <hr class="border-gray-100">
+      <div>
+        <h3 class="font-bold text-gray-800 text-base">2. 📸 사진 추가하기</h3>
+        <p>버튼을 눌러 스마트폰 갤러리의 사진을 고르거나 카메라로 바로 찍어 추가하세요. 아이가 직관적으로 알아볼 수 있는 사진일수록 좋습니다.</p>
+      </div>
+      <hr class="border-gray-100">
+      <div>
+        <h3 class="font-bold text-gray-800 text-base">3. 스케줄 카드 관리</h3>
+        <ul class="list-disc pl-5 mt-2 space-y-1 text-gray-600">
+            <li><strong>🎯 끝:</strong> 완료한 일과를 아래의 '끝 박스'로 보냅니다.</li>
+            <li><strong>▲/▼ 화살표:</strong> 카드의 순서를 위아래로 바꿉니다.</li>
+            <li><strong>✏️ (수정):</strong> 스케줄의 이름을 바꿉니다.</li>
+            <li><strong>🗑️ (삭제):</strong> 카드를 완전히 지웁니다.</li>
+        </ul>
+      </div>
+      <hr class="border-gray-100">
+      <div>
+        <h3 class="font-bold text-gray-800 text-base">4. 📥 끝 박스 (다 한 일)</h3>
+        <p>오늘 아이가 스스로 해낸 일들이 모이는 곳입니다. 칭찬해 주기 좋은 공간이에요! 실수로 끝냈다면 <strong>'🔄 다시 꺼내기'</strong>를 누르세요.</p>
+      </div>
+      <div class="bg-red-50 p-4 rounded-xl text-red-600 mt-4 border border-red-100">
+        <h3 class="font-bold mb-1">⚠️ 데이터 보관 시 주의사항</h3>
+        <p class="text-xs">이 앱의 모든 데이터는 <strong>현재 사용 중인 스마트폰 기기에만 저장</strong>됩니다. 브라우저의 '방문 기록 및 캐시 데이터'를 삭제하면 스케줄도 함께 지워지므로 유의해 주세요!</p>
+      </div>
+    </div>
+    <div class="mt-6">
+      <button onclick="hideManual()" class="w-full py-3.5 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300 transition-colors">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let schedules = JSON.parse(localStorage.getItem('visualSchedulesData_v2')) || [];
+  
+  // 구버전 데이터 마이그레이션 ('월요일' -> '월' 형식으로 다시 짧게 변경)
+  let needsSave = false;
+  const reverseDayMap = {
+    '월요일': '월', '화요일': '화', '수요일': '수',
+    '목요일': '목', '금요일': '금', '토요일': '토', '일요일': '일'
+  };
+
+  schedules.forEach(s => {
+    if (reverseDayMap[s.day]) {
+      s.day = reverseDayMap[s.day];
+      needsSave = true;
+    }
+  });
+  if (needsSave) localStorage.setItem('visualSchedulesData_v2', JSON.stringify(schedules));
+
+  // 구버전(요일 없는 데이터) 마이그레이션 로직
+  let oldData = JSON.parse(localStorage.getItem('visualSchedulesData'));
+  if (oldData && oldData.length > 0 && schedules.length === 0) {
+    schedules = oldData.map(s => ({ ...s, day: '한번' }));
+    localStorage.removeItem('visualSchedulesData');
+    localStorage.setItem('visualSchedulesData_v2', JSON.stringify(schedules));
+  }
+
+  // 요일 설정 (단순화된 이름 적용)
+  const days = ['한번', '월', '화', '수', '목', '금', '토', '일'];
+  const todayIndex = new Date().getDay();
+  let currentDay = days[todayIndex === 0 ? 7 : todayIndex]; 
+
+  const imageInput = document.getElementById('imageInput');
+  const scheduleList = document.getElementById('scheduleList');
+  const doneBox = document.getElementById('doneBox');
+  const dayTabsContainer = document.getElementById('dayTabsContainer');
+  const mainTitle = document.getElementById('mainTitle');
+  const addBtnText = document.getElementById('addBtnText');
+
+  // 좌우 스크롤 버튼 이벤트 리스너 추가
+  document.getElementById('scrollLeftBtn').addEventListener('click', () => {
+    dayTabsContainer.scrollBy({ left: -150, behavior: 'smooth' });
+  });
+  document.getElementById('scrollRightBtn').addEventListener('click', () => {
+    dayTabsContainer.scrollBy({ left: 150, behavior: 'smooth' });
+  });
+
+  // --- 커스텀 모달 관리 ---
+  const Modal = {
+    overlay: document.getElementById('customModal'),
+    content: document.getElementById('modalContent'),
+    title: document.getElementById('modalTitle'),
+    input: document.getElementById('modalInput'),
+    btnCancel: document.getElementById('modalCancel'),
+    btnConfirm: document.getElementById('modalConfirm'),
+    onConfirmCb: null,
+
+    show(options) {
+      this.title.textContent = options.title;
+      if (options.type === 'prompt') {
+        this.input.classList.remove('hidden-input');
+        this.input.value = options.defaultValue || '';
+        this.input.placeholder = options.placeholder || '';
+      } else {
+        this.input.classList.add('hidden-input');
+      }
+      this.onConfirmCb = options.onConfirm;
+      
+      this.overlay.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        this.overlay.classList.remove('opacity-0');
+        this.content.classList.remove('scale-95');
+        if (options.type === 'prompt') this.input.focus();
+      });
+    },
+
+    hide() {
+      this.overlay.classList.add('opacity-0');
+      this.content.classList.add('scale-95');
+      setTimeout(() => { this.overlay.classList.add('hidden'); }, 200);
+    },
+
+    init() {
+      this.btnCancel.addEventListener('click', () => this.hide());
+      this.btnConfirm.addEventListener('click', () => {
+        const val = this.input.value.trim();
+        this.hide();
+        if (this.onConfirmCb) this.onConfirmCb(val);
+      });
+      this.overlay.addEventListener('click', (e) => {
+        if(e.target === this.overlay) this.hide();
+      });
+    }
+  };
+  Modal.init();
+
+  // --- 메인 로직 ---
+
+  // 요일 탭 렌더링
+  function renderTabs() {
+    dayTabsContainer.innerHTML = '';
+    days.forEach(day => {
+      const btn = document.createElement('button');
+      const isActive = day === currentDay;
+      
+      // 요일별 활성화 색상 지정
+      let activeColorClass = 'bg-rudaMint'; // 기본 (한번, 평일)
+      if (day === '토') activeColorClass = 'bg-rudaBlue'; // 토요일
+      if (day === '일') activeColorClass = 'bg-rudaPink'; // 일요일
+
+      btn.className = `snap-center shrink-0 px-4 py-2.5 rounded-full font-bold text-sm sm:text-base transition-colors ${
+        isActive 
+          ? `${activeColorClass} text-white shadow-md` 
+          : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+      }`;
+      btn.textContent = day;
+      btn.onclick = () => {
+        currentDay = day;
+        renderTabs();
+        render();
+      };
+      dayTabsContainer.appendChild(btn);
+    });
+
+    // 타이틀 및 버튼 텍스트 업데이트 (자연스럽게 읽히도록 '요일' 추가)
+    mainTitle.textContent = currentDay === '한번' ? '한번 할 스케줄 🗓️' : `${currentDay}요일 스케줄 🗓️`;
+    addBtnText.textContent = currentDay === '한번' ? '한번 쓸 사진 추가' : `${currentDay}요일 사진 추가`;
+  }
+
+  // 이미지 업로드 이벤트 (압축 비율 조정)
+  imageInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 500; 
+        const MAX_HEIGHT = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        } else {
+          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const compressedImgData = canvas.toDataURL('image/jpeg', 0.8);
+
+        Modal.show({
+          type: 'prompt',
+          title: '새 스케줄의 이름을 입력하세요',
+          placeholder: '예: 언어 치료, 간식 먹기',
+          onConfirm: (title) => {
+            const newTitle = title || "새로운 일정";
+            const newSchedule = {
+              id: Date.now(),
+              day: currentDay, // 현재 선택된 요일로 저장
+              title: newTitle,
+              imgData: compressedImgData,
+              done: false
+            };
+            schedules.push(newSchedule);
+            saveAndRender();
+          }
+        });
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+    imageInput.value = ''; 
+  });
+
+  function saveAndRender() {
+    try {
+      localStorage.setItem('visualSchedulesData_v2', JSON.stringify(schedules));
+      render();
+    } catch (e) {
+      if (e.name === 'QuotaExceededError') {
+        schedules.pop();
+        Modal.show({
+          type: 'confirm',
+          title: '저장 공간이 가득 찼습니다! 오래된 스케줄을 삭제해주세요.',
+          onConfirm: () => {}
+        });
+      } else {
+        console.error(e);
+      }
+    }
+  }
+
+  function render() {
+    scheduleList.innerHTML = '';
+    doneBox.innerHTML = '';
+    
+    // 현재 선택된 요일의 데이터만 필터링
+    const currentSchedules = schedules.filter(s => s.day === currentDay);
+    const todos = currentSchedules.filter(s => !s.done);
+    const dones = currentSchedules.filter(s => s.done);
+    
+    // 1. 진행 중인 스케줄 렌더링
+    if (todos.length === 0) {
+      scheduleList.innerHTML = `<div class="text-center text-gray-400 py-10 bg-white rounded-2xl border border-dashed border-gray-300">아직 추가된 스케줄이 없습니다.</div>`;
+    } else {
+      todos.forEach((item, index) => {
+        const card = createCardElement(item, index, todos.length, false);
+        scheduleList.appendChild(card);
+      });
+    }
+
+    // 2. 끝 박스 렌더링
+    if (dones.length === 0) {
+      doneBox.innerHTML = `<div class="text-center text-gray-400/80 py-4 text-sm">끝난 스케줄이 여기에 모입니다.</div>`;
+    } else {
+      dones.forEach((item) => {
+        const card = createCardElement(item, 0, 0, true);
+        doneBox.appendChild(card);
+      });
+    }
+  }
+
+  // 카드 생성기
+  function createCardElement(item, index, arrayLength, isDone) {
+    const card = document.createElement('div');
+    
+    if (isDone) {
+      card.className = 'schedule-card done-card rounded-2xl p-3 flex items-center';
+      card.innerHTML = `
+        <img src="${item.imgData}" class="w-16 h-16 object-cover rounded-xl bg-gray-200 shrink-0 mr-4 border border-gray-200" alt="스케줄">
+        <div class="flex-1 min-w-0">
+          <h3 class="text-lg font-bold text-gray-500 line-through truncate mb-2">${item.title}</h3>
+          <div class="flex gap-2 no-print">
+            <button onclick="toggleDone(${item.id})" class="px-3 py-1.5 bg-gray-400 text-white text-sm font-semibold rounded-lg shadow-sm active:scale-95 transition-transform">🔄 다시 꺼내기</button>
+            <button onclick="deleteItem(${item.id})" class="px-3 py-1.5 bg-red-400 text-white text-sm font-semibold rounded-lg shadow-sm active:scale-95 transition-transform">🗑️ 삭제</button>
+          </div>
+        </div>
+      `;
+    } else {
+      card.className = 'schedule-card bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 sm:gap-4';
+      card.innerHTML = `
+        <img src="${item.imgData}" class="w-36 h-36 sm:w-44 sm:h-44 object-cover rounded-2xl shadow-sm bg-gray-50 border border-gray-200 shrink-0" alt="스케줄">
+        <div class="flex-1 min-w-0 flex flex-col justify-center h-full py-1">
+          <h3 class="text-xl sm:text-2xl font-bold text-gray-800 truncate mb-4">${item.title}</h3>
+          <!-- 제어 버튼 영역 (인쇄 시 숨김) -->
+          <div class="flex flex-wrap gap-2 mt-auto no-print">
+            <button onclick="toggleDone(${item.id})" class="flex-1 min-w-[70px] px-2 py-3 bg-rudaMint text-white text-sm sm:text-base font-bold rounded-xl shadow-sm active:bg-teal-600 transition-colors">🎯 끝</button>
+            <button onclick="editTitle(${item.id})" class="px-3 py-3 bg-gray-100 text-gray-600 text-sm sm:text-base font-bold rounded-xl shadow-sm active:bg-gray-200 transition-colors">✏️</button>
+            <button onclick="deleteItem(${item.id})" class="px-3 py-3 bg-red-50 text-red-500 text-sm sm:text-base font-bold rounded-xl shadow-sm border border-red-100 active:bg-red-100 transition-colors">🗑️</button>
+          </div>
+        </div>
+        
+        <!-- 위/아래 이동 버튼 (인쇄 시 숨김) -->
+        <div class="flex flex-col justify-center gap-2 ml-1 shrink-0 h-full no-print">
+          <button onclick="moveItem(${item.id}, -1)" class="w-11 h-11 flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-500 text-lg rounded-xl active:scale-95 transition-all disabled:opacity-20 border border-gray-100 shadow-sm" ${index === 0 ? 'disabled' : ''}>▲</button>
+          <button onclick="moveItem(${item.id}, 1)" class="w-11 h-11 flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-500 text-lg rounded-xl active:scale-95 transition-all disabled:opacity-20 border border-gray-100 shadow-sm" ${index === arrayLength - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+      `;
+    }
+    return card;
+  }
+
+  // 액션 함수들
+  window.toggleDone = function(id) {
+    const item = schedules.find(s => s.id === id);
+    if (item) {
+      item.done = !item.done;
+      saveAndRender();
+    }
+  };
+
+  window.editTitle = function(id) {
+    const item = schedules.find(s => s.id === id);
+    if (item) {
+      Modal.show({
+        type: 'prompt',
+        title: '스케줄 이름 수정',
+        defaultValue: item.title,
+        onConfirm: (newTitle) => {
+          if (newTitle) {
+            item.title = newTitle;
+            saveAndRender();
+          }
+        }
+      });
+    }
+  };
+
+  window.deleteItem = function(id) {
+    Modal.show({
+      type: 'confirm',
+      title: '정말 이 스케줄을 삭제할까요?',
+      onConfirm: () => {
+        schedules = schedules.filter(s => s.id !== id);
+        saveAndRender();
+      }
+    });
+  };
+
+  // 끝난 스케줄 모두 되돌리기
+  window.restoreAllDones = function() {
+    const hasDones = schedules.some(s => s.day === currentDay && s.done);
+    if (!hasDones) return; // 끝난 항목이 없으면 동작하지 않음
+
+    Modal.show({
+      type: 'confirm',
+      title: `'${currentDay}' 탭의 끝난 스케줄을 모두 되돌릴까요?`,
+      onConfirm: () => {
+        schedules = schedules.map(s => {
+          if (s.day === currentDay && s.done) {
+            return { ...s, done: false };
+          }
+          return s;
+        });
+        saveAndRender();
+      }
+    });
+  };
+
+  // 현재 요일(탭) 전체 리셋
+  window.resetCurrentDay = function() {
+    Modal.show({
+      type: 'confirm',
+      title: `'${currentDay}' 탭의 모든 스케줄을 싹 지울까요?`,
+      onConfirm: () => {
+        schedules = schedules.filter(s => s.day !== currentDay);
+        saveAndRender();
+      }
+    });
+  };
+
+  // 동일 요일 내에서의 위치 이동
+  window.moveItem = function(id, direction) {
+    const currentSchedules = schedules.filter(s => s.day === currentDay && !s.done);
+    const subIndex = currentSchedules.findIndex(s => s.id === id);
+    if (subIndex === -1) return;
+
+    const targetItem = direction === -1 ? currentSchedules[subIndex - 1] : currentSchedules[subIndex + 1];
+    
+    if (targetItem) {
+      // 전체 배열에서의 진짜 인덱스 찾기
+      const indexA = schedules.findIndex(s => s.id === id);
+      const indexB = schedules.findIndex(s => s.id === targetItem.id);
+      
+      // 스왑
+      [schedules[indexA], schedules[indexB]] = [schedules[indexB], schedules[indexA]];
+      saveAndRender();
+    }
+  };
+
+  // 설명서 모달 로직 추가
+  window.showManual = function() {
+    const modal = document.getElementById('manualModal');
+    const content = document.getElementById('manualContent');
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+      modal.classList.remove('opacity-0');
+      content.classList.remove('scale-95');
+    });
+  };
+
+  window.hideManual = function() {
+    const modal = document.getElementById('manualModal');
+    const content = document.getElementById('manualContent');
+    modal.classList.add('opacity-0');
+    content.classList.add('scale-95');
+    setTimeout(() => { modal.classList.add('hidden'); }, 200);
+  };
+
+  document.getElementById('manualModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('manualModal')) window.hideManual();
+  });
+
+  // 초기 렌더링
+  document.addEventListener('DOMContentLoaded', () => {
+    renderTabs();
+    render();
+  });
+</script>
+
+</body>
+</html>
