@@ -131,12 +131,12 @@
     <button onclick="scrollTabs(1)" class="absolute -right-2 z-10 w-8 h-8 flex items-center justify-center bg-white shadow-md border border-gray-200 text-gray-600 rounded-full active:scale-95 transition-transform text-xs" aria-label="오른쪽으로 스크롤">▶</button>
   </div>
 
-  <!-- 사진 추가 버튼 -->
+  <!-- 사진 추가 버튼 (여러 장 선택 가능하도록 multiple 속성 추가) -->
   <div class="mb-6 no-print">
     <label class="flex items-center justify-center w-full py-4 bg-rudaPink hover:bg-rose-400 active:bg-rose-500 text-white rounded-2xl text-lg font-bold cursor-pointer shadow-lg shadow-red-100 transition-transform transform active:scale-95 border-2 border-rudaPink">
       <span class="mr-2 text-2xl">📸</span> 
       <span id="addBtnText">사진 추가하기</span>
-      <input type="file" id="imageInput" accept="image/*" class="hidden-input">
+      <input type="file" id="imageInput" accept="image/*" multiple class="hidden-input">
     </label>
   </div>
   
@@ -204,14 +204,14 @@
       </div>
 
       <div class="bg-pink-50/50 p-3.5 rounded-xl border border-pink-100">
-        <h4 class="font-bold text-gray-800 mb-1">2. 📸 사진 추가하기</h4>
-        <p><b>[사진 추가하기]</b> 버튼을 눌러 사진을 고르거나 직접 촬영해 추가하세요. 대상이 잘 보이고, 친숙한 사진일수록 좋습니다.</p>
+        <h4 class="font-bold text-gray-800 mb-1">2. 📸 사진 여러장 추가하기</h4>
+        <p><b>[사진 여러장 추가하기]</b> 버튼을 눌러 여러 장의 사진을 동시에 고르거나 촬영해 추가하세요. 대상이 잘 보이고, 친숙한 사진일수록 좋습니다.</p>
       </div>
 
       <div class="bg-sky-50/50 p-3.5 rounded-xl border border-sky-100">
         <h4 class="font-bold text-gray-800 mb-1">3. 스케줄 카드 관리</h4>
         <ul class="list-disc pl-4 space-y-1 mt-1">
-          <li><b>🎯 끝:</b> 일과를 마치면 누르어 '끝 박스'로 이동시킵니다.</li>
+          <li><b>🎯 끝:</b> 일과를 마치면 눌러 '끝 박스'로 이동시킵니다.</li>
           <li><b>▲ / ▼:</b> 카드의 순서를 위아래로 바꿉니다.</li>
           <li><b>✏️ 수정 / 🗑️ 삭제:</b> 이름을 바꾸거나 카드를 지웁니다.</li>
         </ul>
@@ -223,8 +223,8 @@
       </div>
 
       <div class="bg-teal-50/50 p-3.5 rounded-xl border border-teal-100">
-        <h4 class="font-bold text-gray-800 mb-1">5. 🖨️인쇄하기</h4>
-        <p> 상단 <b>🖨️ 인쇄 버튼</b>을 통해 A4 세로 형식으로 깔끔하게 출력할 수 있습니다.</p>
+        <h4 class="font-bold text-gray-800 mb-1">5. 🖨️ 인쇄하기</h4>
+        <p>상단 <b>🖨️ 인쇄 버튼</b>을 통해 A4 세로 형식으로 깔끔하게 출력할 수 있습니다.</p>
       </div>
 
       <div class="text-xs text-gray-400 bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
@@ -316,52 +316,60 @@
     localStorage.setItem('ruda_schedules', JSON.stringify(schedules));
   }
 
-  // 이미지 압축 및 업로드 처리
+  // 여러 장의 이미지 압축 및 업로드 처리
   imageInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxDim = 600;
+    if (!schedules[currentDay]) {
+      schedules[currentDay] = { active: [], done: [] };
+    }
 
-        if (width > height && width > maxDim) {
-          height = Math.round((height * maxDim) / width);
-          width = maxDim;
-        } else if (height > maxDim) {
-          width = Math.round((width * maxDim) / height);
-          height = maxDim;
-        }
+    let processedCount = 0;
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 600;
 
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        
-        if (!schedules[currentDay]) {
-          schedules[currentDay] = { active: [], done: [] };
-        }
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
 
-        schedules[currentDay].active.push({
-          id: Date.now(),
-          text: '',
-          img: compressedDataUrl
-        });
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
 
-        saveSchedules();
-        renderSchedules();
-        imageInput.value = '';
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          
+          schedules[currentDay].active.push({
+            id: Date.now() + Math.random(), // 중복 ID 방지
+            text: '',
+            img: compressedDataUrl
+          });
+
+          processedCount++;
+          // 모든 파일 처리가 완료되면 화면을 갱신하고 input 초기화
+          if (processedCount === files.length) {
+            saveSchedules();
+            renderSchedules();
+            imageInput.value = '';
+          }
+        };
+        img.src = event.target.result;
       };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    });
   });
 
   // 스케줄 목록 렌더링 (사진 크기 큼직하게 1/2 비율 유지)
@@ -374,7 +382,7 @@
     if (dayData.active.length === 0) {
       scheduleList.innerHTML = `
         <div class="text-center py-10 bg-white rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">
-          등록된 스케줄이 없어요.<br>위의 사진 추가 버튼을 눌러 시작해보세요! 📸
+          등록된 스케줄이 없어요.<br>위의 사진 여러장 추가하기 버튼을 눌러 시작해보세요! 📸
         </div>
       `;
     } else {
@@ -387,7 +395,7 @@
             <h3 class="text-lg font-bold text-gray-800 break-words leading-snug mb-3">${item.text}</h3>
             <div class="flex flex-wrap items-center gap-1.5 no-print">
               <button onclick="moveToDone(${item.id})" class="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-rudaMint rounded-lg font-bold text-xs shadow-sm transition-transform active:scale-95">🎯 끝</button>
-              <button onclick="openEditModal('${currentDay}', 'active', ${item.id}, '${item.text}')" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-xs transition-transform active:scale-95">✏️수정</button>
+              <button onclick="openEditModal('${currentDay}', 'active', ${item.id}, '${item.text.replace(/'/g, "\\'")}')" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-xs transition-transform active:scale-95">✏️수정</button>
               <button onclick="deleteSchedule('${currentDay}', 'active', ${item.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rudaPink rounded-lg font-semibold text-xs transition-transform active:scale-95">🗑️</button>
             </div>
             <div class="flex items-center gap-1 mt-2 no-print">
@@ -512,13 +520,11 @@
 
     modalConfirm.onclick = function() {
       const newText = modalInput.value.trim();
-      if (newText) {
-        const item = schedules[dayKey][type].find(i => i.id === id);
-        if (item) {
-          item.text = newText;
-          saveSchedules();
-          renderSchedules();
-        }
+      const item = schedules[dayKey][type].find(i => i.id === id);
+      if (item) {
+        item.text = newText;
+        saveSchedules();
+        renderSchedules();
       }
       closeModal();
     };
@@ -535,7 +541,7 @@
     }, 200);
   }
 
-  // 설명서 모달 제er
+  // 설명서 모달 제어
   const manualModal = document.getElementById('manualModal');
   const manualModalContent = document.getElementById('manualModalContent');
 
