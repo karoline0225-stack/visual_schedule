@@ -170,6 +170,7 @@
 <!-- 카피라이트 푸터 -->
 <footer class="mt-10 mb-4 text-center text-gray-400 text-sm font-medium no-print flex flex-col gap-1">
   <div>© 2026 Created by <a href="https://www.instagram.com/ruda_slp" target="_blank" rel="noopener noreferrer" class="text-rudaMint hover:text-teal-600 underline underline-offset-2">@ruda_slp</a></div>
+  <div><a href="https://blog.naver.com/rudacenter" target="_blank" rel="noopener noreferrer" class="text-rudaMint hover:text-teal-600 underline underline-offset-2">루다언어심리학습센터</a></div>
   <div class="text-xs text-gray-400">&lt;무단 복제/도용 금지&gt;</div>
 </footer>
 
@@ -204,7 +205,7 @@
 
       <div class="bg-pink-50/50 p-3.5 rounded-xl border border-pink-100">
         <h4 class="font-bold text-gray-800 mb-1">2. 📸 사진 추가하기</h4>
-        <p><b>[사진 추가하기]</b> 버튼을 눌러 사진을 고르거나 직접 촬영해 추가하세요. 친숙한 사진일수록 효과가 좋습니다.</p>
+        <p><b>[사진 추가하기]</b> 버튼을 눌러 사진을 고르거나 직접 촬영해 추가하세요. 대상이 잘 보이고, 친숙한 사진일수록 좋습니다.</p>
       </div>
 
       <div class="bg-sky-50/50 p-3.5 rounded-xl border border-sky-100">
@@ -217,12 +218,17 @@
       </div>
 
       <div class="bg-gray-50 p-3.5 rounded-xl border border-gray-200">
-        <h4 class="font-bold text-gray-800 mb-1">4. 📥 끝 박스 및 인쇄 기능</h4>
-        <p>'끝' 누른 일정은 아래 끝 박스에 모이며, 상단 <b>🖨️ 인쇄 버튼</b>을 통해 A4 세로 형식으로 깔끔하게 출력할 수 있습니다.</p>
+        <h4 class="font-bold text-gray-800 mb-1">4. 📥 끝 박스 기능</h4>
+        <p>'끝' 누른 일정은 아래 끝 박스에 모이며, <b>🔄 끝난 스케줄 모두 되돌리기</b>는 끝 박스에 모인 모든 스케줄을 끝 박스에서 다시 꺼내어 스케줄로 등록할 수 있습니다.</p>
+      </div>
+
+      <div class="bg-teal-50/50 p-3.5 rounded-xl border border-teal-100">
+        <h4 class="font-bold text-gray-800 mb-1">5. 🖨️인쇄하기</h4>
+        <p> 상단 <b>🖨️ 인쇄 버튼</b>을 통해 A4 세로 형식으로 깔끔하게 출력할 수 있습니다.</p>
       </div>
 
       <div class="text-xs text-gray-400 bg-amber-50 p-3 rounded-lg border border-amber-100 mt-2">
-        <b>💡 안내:</b> 데이터는 사용 중인 기기(브라우저)에 안전하게 저장됩니다. 브라우저 캐시 삭제 시 데이터가 초기화될 수 있으니 유의하세요.
+        <b>💡 데이터 저장 안내:</b> 데이터는 사용 중인 기기(브라우저)에 안전하게 저장됩니다. <b>🗑️현재 탭 스케줄 전체 리셋하기</b>를 누르면 해당 탭의 데이터는 삭제됩니다. 브라우저 캐시 삭제 시 데이터가 초기화될 수 있으니 유의하세요.
       </div>
     </div>
 
@@ -345,7 +351,7 @@
 
         schedules[currentDay].active.push({
           id: Date.now(),
-          text: '새로운 스케줄',
+          text: '',
           img: compressedDataUrl
         });
 
@@ -381,7 +387,7 @@
             <h3 class="text-lg font-bold text-gray-800 break-words leading-snug mb-3">${item.text}</h3>
             <div class="flex flex-wrap items-center gap-1.5 no-print">
               <button onclick="moveToDone(${item.id})" class="px-3 py-1.5 bg-teal-50 hover:bg-teal-100 text-rudaMint rounded-lg font-bold text-xs shadow-sm transition-transform active:scale-95">🎯 끝</button>
-              <button onclick="openEditModal('${currentDay}', 'active', ${item.id}, '${item.text}')" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-xs transition-transform active:scale-95">✏️</button>
+              <button onclick="openEditModal('${currentDay}', 'active', ${item.id}, '${item.text}')" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold text-xs transition-transform active:scale-95">✏️수정</button>
               <button onclick="deleteSchedule('${currentDay}', 'active', ${item.id})" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rudaPink rounded-lg font-semibold text-xs transition-transform active:scale-95">🗑️</button>
             </div>
             <div class="flex items-center gap-1 mt-2 no-print">
@@ -398,7 +404,7 @@
     if (dayData.done.length === 0) {
       doneBox.innerHTML = `
         <div class="text-center py-4 text-gray-400 text-sm font-medium">
-          아직 마친 스케줄이 없어요!
+          아직 끝난 스케줄이 없어요!
         </div>
       `;
     } else {
